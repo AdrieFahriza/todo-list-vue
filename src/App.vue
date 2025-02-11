@@ -13,6 +13,7 @@
       <div class="input-group">
         <input type="text" class="form-control" placeholder="Add Item..." v-model="userInput" @keyup.enter="addItem">
         <button class="btn btn-success" @click="addItem">ADD</button>
+        <button class="btn btn-info" @click="searchItem">Search</button>
       </div>
       <div class="todo-table">
         <div class="table-header">
@@ -33,44 +34,80 @@
 </template>
 
 <script>
+import { ref, computed, onMounted} from 'vue';
+import axios from 'axios';
+
   export default{
-    name: 'App',
-    data() {
-      return {
-        userInput: '',
-        searchInput: '',
-        list:[]
+    setup () {
+      const userInput = ref('');
+      const searchInput = ref('');
+      const list = ref([]);
+      const apiUrl = `https://jsonplaceholder.typicode.com/todos`;
+    
+      const fetchTodosFromAPI = async () => {
+        try {
+          const response = await axios.get(apiUrl);
+          list.value = response.data.map(todo => ({
+            id: todo.id,
+            value: todo.title,
+            completed: todo.completed
+          }));
+        } catch (error) {
+          console.error("Error fetching todos:", error);
+        }
       };
-    },
-    computed: {
-      filteredList() {
-        return this.list.filter(item => item.value.toLowerCase().includes(this.searchInput.toLowerCase()));
-      }
-    },
-    methods: {
-      addItem() {
-        if (this.userInput.trim() !== '') {
+
+      const filteredList = computed(() =>
+    list.value.filter(item => item.value.toLowerCase().includes(searchInput.value.toLowerCase())
+  )
+);
+      const addItem = () => {
+        if (userInput.value.trim() !== '') {
           const newItem = {
             id: Math.random(),
-            value: this.userInput.trim(),
+            value: userInput.value.trim(),
             completed: false
           };
-          this.list.push(newItem);
-          this.userInput='';
+          list.value.push(newItem);
+          userInput.value='';
         }
-      },
-      deleteItem(index) {
-        this.list.splice(index, 1);
-      },
-      editItem(index) {
+      };
+
+      const deleteItem = (index) => {
+        list.value.splice(index, 1);
+      };
+
+      const editItem = (index) => {
         const editedTodo = prompt('Edit the todo:');
         if (editedTodo !== null && editedTodo.trim() !== '') {
-          this.list[index].value = editedTodo.trim();
+          list.value[index].value = editedTodo.trim();
         }
-      },
-      toggleCompleted(index) {
-        this.list[index].completed = !this.list[index].completed;
-      }
+      };
+
+      const toggleCompleted = (index) => {
+        list.value[index].completed = !list.value[index].completed;
+      };
+
+      const searchItem = () => {
+        const query = userInput.value;
+        if (query !== null) {
+          searchInput.value = query.trim();
+        }
+      };
+
+      onMounted(fetchTodosFromAPI);
+
+      return {
+        userInput, 
+        searchInput,
+        list,
+        filteredList,
+        addItem,
+        deleteItem, 
+        editItem,
+        toggleCompleted,
+        searchItem
+      };
     }
   };
 </script>
